@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# YOLO model (auto-downloaded on first run)
+*.pt
+
+# PyInstaller
+dist/
+build/
+*.spec
+
+# Video files
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
