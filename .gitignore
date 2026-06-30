@@ -9,9 +9,8 @@ __pycache__/
 *.pt
 
 # PyInstaller
-dist/
-build/
-*.spec
+build/dist/
+build/work/
 
 # Video files
 *.mp4

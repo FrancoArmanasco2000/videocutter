@@ -1,0 +1,167 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Mac build ──────────────────────────────────────────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ffmpeg
+        run: brew install ffmpeg
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Build .app
+        run: |
+          cd build
+          pyinstaller app.spec --distpath dist --workpath work --noconfirm
+
+      - name: Zip .app
+        run: |
+          cd build/dist
+          zip -r VideoCutter-mac.zip VideoCutter.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-build
+          path: build/dist/VideoCutter-mac.zip
+
+  # ── Windows build ──────────────────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ffmpeg
+        run: choco install ffmpeg --no-progress -y
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Build .exe
+        run: |
+          cd build
+          pyinstaller app.spec --distpath dist --workpath work --noconfirm
+
+      - name: Zip dist folder
+        run: |
+          cd build/dist
+          Compress-Archive -Force -Path VideoCutter -DestinationPath VideoCutter-windows.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: build/dist/VideoCutter-windows.zip
+
+  # ── Linux build ───────────────────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg python3-tk
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Build binary
+        run: |
+          cd build
+          pyinstaller app.spec --distpath dist --workpath work --noconfirm
+
+      - name: Create tar.gz
+        run: |
+          cd build/dist
+          tar -czf VideoCutter-linux.tar.gz VideoCutter
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: build/dist/VideoCutter-linux.tar.gz
+
+  # ── GitHub Release ─────────────────────────────────────────────────────────
+  release:
+    needs: [build-mac, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Mac build
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-build
+          path: artifacts
+
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: artifacts
+
+      - name: Download Linux build
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Video Cutter ${{ github.ref_name }}"
+          body: |
+            ## Video Cutter — Sports Analysis Edition ${{ github.ref_name }}
+
+            ### Instalación
+
+            **Mac**
+            1. Descargá `VideoCutter-mac.zip`
+            2. Descomprimí → arrastrá `VideoCutter.app` a Aplicaciones
+            3. Primera vez: clic derecho → Abrir (bypass de Gatekeeper)
+
+            **Windows**
+            1. Descargá `VideoCutter-windows.zip`
+            2. Descomprimí → ejecutá `VideoCutter.exe`
+
+            **Linux**
+            ```bash
+            tar -xzf VideoCutter-linux.tar.gz
+            cd VideoCutter
+            ./VideoCutter
+            ```
+
+            > La primera vez que uses detección AI descarga el modelo (~6 MB).
+          files: |
+            artifacts/VideoCutter-mac.zip
+            artifacts/VideoCutter-windows.zip
+            artifacts/VideoCutter-linux.tar.gz
+          draft: false
+          prerelease: false
