@@ -132,7 +132,9 @@ class VideoPlayer(ctk.CTkFrame):
         _sec = dict(height=34, fg_color=NEUTRAL, hover_color=NEUTRAL_HOVER,
                     text_color=TEXT_PRIMARY, border_color=BORDER, border_width=1)
 
-        ctk.CTkButton(ctrl, text="⏮", width=44, command=self._go_to_start, **_sec).pack(side="left", padx=(0, 4))
+        ctk.CTkButton(ctrl, text="⏮", width=44, command=self._go_to_start, **_sec).pack(side="left", padx=(0, 2))
+        ctk.CTkButton(ctrl, text="‹", width=36, command=self._step_backward,
+                      **_sec).pack(side="left", padx=(0, 4))
 
         self._play_btn = ctk.CTkButton(
             ctrl, text="▶  Play", width=96, height=34,
@@ -142,6 +144,8 @@ class VideoPlayer(ctk.CTkFrame):
         )
         self._play_btn.pack(side="left", padx=(0, 4))
 
+        ctk.CTkButton(ctrl, text="›", width=36, command=self._step_forward,
+                      **_sec).pack(side="left", padx=(0, 2))
         ctk.CTkButton(ctrl, text="⏭", width=44, command=self._go_to_end, **_sec).pack(side="left", padx=(0, 24))
 
         ctk.CTkButton(
@@ -228,6 +232,9 @@ class VideoPlayer(ctk.CTkFrame):
             text_color=TEXT_MUTED, font=ctk.CTkFont(size=12),
             command=self._clear_drawings,
         ).pack(side="left", padx=(0, 8), pady=6)
+
+        # Keyboard shortcuts — bound after widget is attached to the window
+        self.after(200, self._bind_keys)
 
     # ── public API ──────────────────────────────────────────────────────────
 
@@ -320,6 +327,14 @@ class VideoPlayer(ctk.CTkFrame):
         if was_playing:
             self._play()
 
+    def _step_backward(self):
+        self._stop()
+        self._seek_to_frame(max(0, self._current_frame - 1))
+
+    def _step_forward(self):
+        self._stop()
+        self._seek_to_frame(min(self._total_frames - 1, self._current_frame + 1))
+
     def _go_to_start(self):
         self._stop()
         self._seek_to_frame(0)
@@ -327,6 +342,27 @@ class VideoPlayer(ctk.CTkFrame):
     def _go_to_end(self):
         self._stop()
         self._seek_to_frame(max(0, self._total_frames - 1))
+
+    def _bind_keys(self):
+        root = self.winfo_toplevel()
+        root.bind("<Left>",  self._on_key_left)
+        root.bind("<Right>", self._on_key_right)
+        root.bind("<space>", self._on_key_space)
+
+    def _on_key_left(self, event: tk.Event):
+        if isinstance(event.widget, tk.Entry):
+            return
+        self._step_backward()
+
+    def _on_key_right(self, event: tk.Event):
+        if isinstance(event.widget, tk.Entry):
+            return
+        self._step_forward()
+
+    def _on_key_space(self, event: tk.Event):
+        if isinstance(event.widget, tk.Entry):
+            return
+        self._toggle_play()
 
     def _set_start(self):
         self._on_set_start(self._current_frame / self._fps)
