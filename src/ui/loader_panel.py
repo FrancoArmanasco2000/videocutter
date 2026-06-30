@@ -3,11 +3,16 @@ from tkinter import filedialog
 from typing import Callable
 import customtkinter as ctk
 from services.downloader import Downloader
+from ui.theme import (
+    BG_PANEL, BG_INSET, BORDER, ACCENT, ACCENT_HOVER,
+    NEUTRAL, NEUTRAL_HOVER, TEXT_PRIMARY, TEXT_MUTED, TEXT_DIM, RADIUS,
+)
 
 
 class LoaderPanel(ctk.CTkFrame):
     def __init__(self, master, on_loaded: Callable[[str], None]):
-        super().__init__(master)
+        super().__init__(master, fg_color=BG_PANEL, border_color=BORDER,
+                         border_width=1, corner_radius=RADIUS)
         self._on_loaded = on_loaded
         self._downloader = Downloader()
         self._build()
@@ -15,20 +20,50 @@ class LoaderPanel(ctk.CTkFrame):
     def _build(self):
         self.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(self, text="Video source:").grid(row=0, column=0, padx=(10, 6), pady=12)
+        ctk.CTkLabel(
+            self, text="SOURCE",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color=TEXT_DIM,
+        ).grid(row=0, column=0, columnspan=4, padx=14, pady=(10, 4), sticky="w")
 
-        self._url_entry = ctk.CTkEntry(self, placeholder_text="Paste URL or leave empty to pick a file…")
-        self._url_entry.grid(row=0, column=1, padx=0, pady=12, sticky="ew")
+        ctk.CTkLabel(
+            self, text="URL / File",
+            font=ctk.CTkFont(size=12),
+            text_color=TEXT_MUTED,
+        ).grid(row=1, column=0, padx=(14, 10), pady=(0, 12))
 
-        ctk.CTkButton(self, text="Browse", width=80, command=self._browse).grid(
-            row=0, column=2, padx=(6, 6), pady=12
+        self._url_entry = ctk.CTkEntry(
+            self,
+            placeholder_text="Paste a video URL or browse for an MP4 file…",
+            fg_color=BG_INSET,
+            border_color=BORDER,
+            text_color=TEXT_PRIMARY,
+            placeholder_text_color=TEXT_DIM,
+            height=34,
         )
-        ctk.CTkButton(self, text="Load", width=80, command=self._load).grid(
-            row=0, column=3, padx=(0, 10), pady=12
-        )
+        self._url_entry.grid(row=1, column=1, padx=0, pady=(0, 12), sticky="ew")
 
-        self._status = ctk.CTkLabel(self, text="", text_color="gray")
-        self._status.grid(row=1, column=0, columnspan=4, padx=10, pady=(0, 8))
+        ctk.CTkButton(
+            self, text="Browse", width=86, height=34,
+            fg_color=NEUTRAL, hover_color=NEUTRAL_HOVER,
+            text_color=TEXT_PRIMARY,
+            border_color=BORDER, border_width=1,
+            command=self._browse,
+        ).grid(row=1, column=2, padx=(8, 6), pady=(0, 12))
+
+        ctk.CTkButton(
+            self, text="Load", width=86, height=34,
+            fg_color=ACCENT, hover_color=ACCENT_HOVER,
+            text_color="#ffffff", font=ctk.CTkFont(weight="bold"),
+            command=self._load,
+        ).grid(row=1, column=3, padx=(0, 14), pady=(0, 12))
+
+        self._status = ctk.CTkLabel(
+            self, text="",
+            font=ctk.CTkFont(size=11),
+            text_color=TEXT_MUTED,
+        )
+        self._status.grid(row=2, column=0, columnspan=4, padx=14, pady=(0, 8), sticky="w")
 
     def _browse(self):
         path = filedialog.askopenfilename(
@@ -43,8 +78,7 @@ class LoaderPanel(ctk.CTkFrame):
         if not source:
             self._set_status("Enter a URL or select a file.", error=True)
             return
-
-        if source.startswith("http://") or source.startswith("https://"):
+        if source.startswith(("http://", "https://")):
             self._set_status("Downloading…")
             threading.Thread(target=self._download, args=(source,), daemon=True).start()
         else:
@@ -60,7 +94,7 @@ class LoaderPanel(ctk.CTkFrame):
             self.after(0, lambda: self._set_status(f"Error: {e}", error=True))
 
     def _on_progress(self, percent: float):
-        self.after(0, lambda: self._set_status(f"Downloading… {percent:.0f}%"))
+        self.after(0, lambda: self._set_status(f"Downloading…  {percent:.0f}%"))
 
     def _set_status(self, msg: str, error: bool = False):
-        self._status.configure(text=msg, text_color="red" if error else "gray")
+        self._status.configure(text=msg, text_color="#ef4444" if error else TEXT_MUTED)

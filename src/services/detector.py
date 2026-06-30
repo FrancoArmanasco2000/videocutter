@@ -7,15 +7,29 @@ import ffmpeg
 
 # COCO class IDs relevant to sports analysis
 COCO_CLASSES = {
-    0: "Person",
+    0: "Player",
     32: "Ball",
 }
 
-# Box colors per class (BGR)
+# Default box color per class (BGR) — used when tracking is off
 CLASS_COLORS = {
-    0: (0, 200, 255),   # orange — person
-    32: (0, 255, 80),   # green  — ball
+    0: (0, 200, 255),   # orange
+    32: (0, 255, 80),   # green
 }
+
+# Palette for unique per-ID colors when tracking is on
+TRACK_PALETTE = [
+    (255,  80,  80),  # red
+    ( 80,  80, 255),  # blue
+    ( 80, 255,  80),  # lime
+    (255, 200,   0),  # yellow
+    (200,   0, 255),  # violet
+    (  0, 200, 255),  # cyan
+    (255, 120,   0),  # orange
+    (  0, 255, 200),  # teal
+    (255,   0, 160),  # pink
+    (160, 255,   0),  # chartreuse
+]
 
 
 class Detector:
@@ -27,6 +41,10 @@ class Detector:
             from ultralytics import YOLO
             self._model = YOLO("yolov8n.pt")
 
+    def _fresh_model(self):
+        from ultralytics import YOLO
+        return YOLO("yolov8n.pt")
+
     def process_video(
         self,
         source: str,
@@ -35,9 +53,13 @@ class Detector:
         end: float,
         classes: list[int],
         confidence: float = 0.4,
+        tracking: bool = False,
         on_progress: Callable[[float], None] | None = None,
     ) -> None:
         self._load_model()
+
+        # Tracking needs a fresh model instance per run so IDs reset to #1
+        model = self._fresh_model() if tracking else self._model
 
         cap = cv2.VideoCapture(source)
         fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
@@ -50,7 +72,6 @@ class Detector:
 
         cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
 
-        # Write annotated frames to a temporary file (no audio)
         tmp_fd, tmp_path = tempfile.mkstemp(suffix="_noaudio.mp4")
         os.close(tmp_fd)
 
@@ -59,21 +80,31 @@ class Detector:
 
         frame_idx = 0
         while cap.isOpened():
-            current_pos = cap.get(cv2.CAP_PROP_POS_FRAMES)
-            if current_pos > end_frame:
+            if cap.get(cv2.CAP_PROP_POS_FRAMES) > end_frame:
                 break
 
             ret, frame = cap.read()
             if not ret:
                 break
 
-            results = self._model(
-                frame,
-                classes=classes,
-                conf=confidence,
-                verbose=False,
-            )
-            annotated = self._draw(frame, results[0], classes)
+            if tracking:
+                results = model.track(
+                    frame,
+                    classes=classes,
+                    conf=confidence,
+                    persist=True,
+                    tracker="bytetrack.yaml",
+                    verbose=False,
+                )
+            else:
+                results = model(
+                    frame,
+                    classes=classes,
+                    conf=confidence,
+                    verbose=False,
+                )
+
+            annotated = self._draw(frame, results[0], classes, tracking)
             writer.write(annotated)
 
             frame_idx += 1
@@ -83,7 +114,6 @@ class Detector:
         cap.release()
         writer.release()
 
-        # Merge annotated frames with original audio segment
         duration = end - start
         try:
             video_in = ffmpeg.input(tmp_path)
@@ -103,7 +133,6 @@ class Detector:
                 .run(quiet=True)
             )
         except ffmpeg.Error:
-            # Source has no audio — export video only
             (
                 ffmpeg
                 .input(tmp_path)
@@ -118,7 +147,7 @@ class Detector:
             on_progress(100.0)
 
     @staticmethod
-    def _draw(frame, result, classes: list[int]):
+    def _draw(frame, result, classes: list[int], tracking: bool):
         for box in result.boxes:
             cls_id = int(box.cls[0])
             if cls_id not in classes:
@@ -126,17 +155,31 @@ class Detector:
 
             conf = float(box.conf[0])
             x1, y1, x2, y2 = map(int, box.xyxy[0])
-            color = CLASS_COLORS.get(cls_id, (255, 255, 255))
-            label = f"{COCO_CLASSES.get(cls_id, cls_id)} {conf:.0%}"
+
+            track_id = None
+            if tracking and box.id is not None:
+                track_id = int(box.id[0])
+
+            # Unique color per ID when tracking; class color otherwise
+            if track_id is not None:
+                color = TRACK_PALETTE[track_id % len(TRACK_PALETTE)]
+            else:
+                color = CLASS_COLORS.get(cls_id, (255, 255, 255))
+
+            label = (
+                f"#{track_id} {COCO_CLASSES.get(cls_id, cls_id)}"
+                if track_id is not None
+                else f"{COCO_CLASSES.get(cls_id, cls_id)} {conf:.0%}"
+            )
 
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
 
-            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.55, 1)
-            cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), color, -1)
+            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+            cv2.rectangle(frame, (x1, y1 - th - 8), (x1 + tw + 6, y1), color, -1)
             cv2.putText(
                 frame, label,
-                (x1 + 2, y1 - 4),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.55,
+                (x1 + 3, y1 - 5),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6,
                 (0, 0, 0), 1, cv2.LINE_AA,
             )
 
