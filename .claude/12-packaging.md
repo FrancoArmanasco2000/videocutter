@@ -4,7 +4,7 @@
 ✅ Complete
 
 ## Files
-- `build/app.spec` — PyInstaller spec (Mac + Windows)
+- `build/app.spec` — PyInstaller spec (Mac + Windows + Linux)
 - `.github/workflows/release.yml` — CI/CD automático
 - `src/utils/env.py` — agrega el ffmpeg bundleado al PATH en runtime
 - `src/main.py` — llama a env.setup() antes de cualquier import
@@ -48,9 +48,22 @@ Mac y Windows no tienen este problema (sus wheels de torch ya vienen
 compactos), así que solo se aplica en el job de Linux.
 
 ## Bundling de ffmpeg
-PyInstaller copia el binario de ffmpeg del sistema de build al bundle.
-`env.setup()` agrega `sys._MEIPASS` al PATH en runtime para que
-`ffmpeg-python` lo encuentre sin cambios en el código de servicios.
+PyInstaller copia el binario de ffmpeg del sistema de build al bundle,
+dentro de una subcarpeta `bin/`. `env.setup()` agrega esa subcarpeta
+(`sys._MEIPASS/bin`) al PATH en runtime para que `ffmpeg-python` lo
+encuentre sin cambios en el código de servicios.
+
+⚠️ El binario va en `bin/` y NO en la raíz del bundle (`binaries=[(ffmpeg_bin, ".")]`)
+porque el nombre del ejecutable (`ffmpeg`, sin extensión en Mac/Linux) choca
+con el nombre del paquete Python `ffmpeg-python` (carpeta `ffmpeg/` con
+`__init__.py`, `nodes.py`, etc.) que PyInstaller también extrae en la raíz.
+Un archivo y una carpeta con el mismo nombre en el mismo lugar se pisan,
+dejando el paquete `ffmpeg-python` corrupto → `ImportError: cannot import
+name 'nodes' from partially initialized module 'ffmpeg' (most likely due
+to a circular import)` al abrir la app (crashea apenas arranca, sin mostrar
+ventana porque `console=False`). Pasó en Mac (`v1.0.0`); Windows se salvaba
+porque el binario se llama `ffmpeg.exe`, no `ffmpeg`, así que no chocaba —
+pero Linux tiene el mismo riesgo que Mac (binario sin extensión).
 
 ## Mac — Gatekeeper
 Sin code signing, Mac muestra "developer unidentified".

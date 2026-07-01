@@ -79,6 +79,10 @@ class ClipsPanel(ctk.CTkFrame):
     def get_clips(self) -> list[tuple[float, float]]:
         return list(self._clips)
 
+    def set_clips(self, clips: list[tuple[float, float]]):
+        self._clips = list(clips)
+        self._refresh()
+
     # ── internal ────────────────────────────────────────────────────────────
 
     def _add_clip(self):

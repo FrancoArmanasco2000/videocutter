@@ -3,6 +3,7 @@ from tkinter import filedialog
 from typing import Callable
 import customtkinter as ctk
 from services.downloader import Downloader
+from utils.notify import notify
 from ui.theme import (
     BG_PANEL, BG_INSET, BORDER, ACCENT, ACCENT_HOVER,
     NEUTRAL, NEUTRAL_HOVER, TEXT_PRIMARY, TEXT_MUTED, TEXT_DIM, RADIUS,
@@ -15,6 +16,7 @@ class LoaderPanel(ctk.CTkFrame):
                          border_width=1, corner_radius=RADIUS)
         self._on_loaded = on_loaded
         self._downloader = Downloader()
+        self._current_source: str | None = None
         self._build()
 
     def _build(self):
@@ -82,16 +84,31 @@ class LoaderPanel(ctk.CTkFrame):
             self._set_status("Downloading…")
             threading.Thread(target=self._download, args=(source,), daemon=True).start()
         else:
+            self._current_source = source
             self._on_loaded(source)
             self._set_status("File loaded.")
 
     def _download(self, url: str):
         try:
             path = self._downloader.download(url, on_progress=self._on_progress)
+            self._current_source = path
             self.after(0, lambda: self._on_loaded(path))
             self.after(0, lambda: self._set_status("Download complete."))
+            notify("Video Cutter", "Download complete.")
         except Exception as e:
-            self.after(0, lambda: self._set_status(f"Error: {e}", error=True))
+            msg = str(e)
+            self.after(0, lambda: self._set_status(f"Error: {msg}", error=True))
+
+    def get_source(self) -> str | None:
+        return self._current_source
+
+    def load_path(self, path: str):
+        """Loads a source directly (used by Load Project) — skips URL/download logic."""
+        self._url_entry.delete(0, "end")
+        self._url_entry.insert(0, path)
+        self._current_source = path
+        self._on_loaded(path)
+        self._set_status("File loaded.")
 
     def _on_progress(self, percent: float):
         self.after(0, lambda: self._set_status(f"Downloading…  {percent:.0f}%"))

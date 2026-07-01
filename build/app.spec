@@ -31,8 +31,10 @@ hiddenimports = [
     "ffmpeg",
     "tkinter",
     "tkinter.filedialog",
+    "lap",
 ]
 hiddenimports += collect_submodules("ultralytics")
+hiddenimports += collect_submodules("lap")
 hiddenimports += collect_submodules("yt_dlp")
 
 block_cipher = None
@@ -40,7 +42,7 @@ block_cipher = None
 a = Analysis(
     ["../src/main.py"],
     pathex=["../src"],
-    binaries=[(ffmpeg_bin, ".")],
+    binaries=[(ffmpeg_bin, "bin")],
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

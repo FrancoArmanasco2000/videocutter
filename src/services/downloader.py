@@ -1,13 +1,14 @@
 import os
-import tempfile
 from typing import Callable
 import yt_dlp
+
+DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "VideoCutter", "Downloads")
 
 
 class Downloader:
     def download(self, url: str, on_progress: Callable[[float], None] | None = None) -> str:
-        out_dir = tempfile.mkdtemp(prefix="videocutter_")
-        out_template = os.path.join(out_dir, "%(title)s.%(ext)s")
+        os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+        out_template = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
 
         ydl_opts = {
             "outtmpl": out_template,

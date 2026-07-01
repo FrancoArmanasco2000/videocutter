@@ -12,13 +12,13 @@ class DetectionPanel(ctk.CTkFrame):
         self._build()
 
     def _build(self):
-        self.grid_columnconfigure(4, weight=1)
+        self.grid_columnconfigure(5, weight=1)
 
         ctk.CTkLabel(
             self, text="AI ANALYSIS",
             font=ctk.CTkFont(size=10, weight="bold"),
             text_color=TEXT_DIM,
-        ).grid(row=0, column=0, columnspan=7, padx=14, pady=(10, 6), sticky="w")
+        ).grid(row=0, column=0, columnspan=8, padx=14, pady=(10, 6), sticky="w")
 
         # Enable switch
         self._enabled = ctk.BooleanVar(value=False)
@@ -37,6 +37,7 @@ class DetectionPanel(ctk.CTkFrame):
         self._person = ctk.BooleanVar(value=True)
         self._ball = ctk.BooleanVar(value=True)
         self._tracking = ctk.BooleanVar(value=False)
+        self._teams = ctk.BooleanVar(value=False)
 
         checkbox_style = dict(
             font=ctk.CTkFont(size=12),
@@ -56,13 +57,18 @@ class DetectionPanel(ctk.CTkFrame):
         self._cb_tracking = ctk.CTkCheckBox(
             self, text="Track IDs", variable=self._tracking, **checkbox_style,
         )
-        self._cb_tracking.grid(row=1, column=3, padx=(0, 24), pady=(0, 12))
+        self._cb_tracking.grid(row=1, column=3, padx=(0, 16), pady=(0, 12))
+
+        self._cb_teams = ctk.CTkCheckBox(
+            self, text="Team colors", variable=self._teams, **checkbox_style,
+        )
+        self._cb_teams.grid(row=1, column=4, padx=(0, 24), pady=(0, 12))
 
         # Confidence
         ctk.CTkLabel(
             self, text="Confidence",
             font=ctk.CTkFont(size=12), text_color=TEXT_MUTED,
-        ).grid(row=1, column=4, padx=(0, 8), pady=(0, 12), sticky="e")
+        ).grid(row=1, column=5, padx=(0, 8), pady=(0, 12), sticky="e")
 
         self._confidence = ctk.DoubleVar(value=0.4)
         self._conf_label = ctk.CTkLabel(
@@ -70,7 +76,7 @@ class DetectionPanel(ctk.CTkFrame):
             font=ctk.CTkFont(family="Courier", size=13, weight="bold"),
             text_color=TEXT_PRIMARY, width=40,
         )
-        self._conf_label.grid(row=1, column=6, padx=(4, 14), pady=(0, 12))
+        self._conf_label.grid(row=1, column=7, padx=(4, 14), pady=(0, 12))
 
         self._slider = ctk.CTkSlider(
             self, from_=0.1, to=0.9,
@@ -80,16 +86,18 @@ class DetectionPanel(ctk.CTkFrame):
             width=120,
             command=lambda v: self._conf_label.configure(text=f"{v:.0%}"),
         )
-        self._slider.grid(row=1, column=5, padx=(0, 4), pady=(0, 12))
+        self._slider.grid(row=1, column=6, padx=(0, 4), pady=(0, 12))
 
         self._note = ctk.CTkLabel(
             self,
-            text="First run downloads the YOLO model (~6 MB).  "
-                 "Track IDs assigns a persistent number to each detected player.",
+            text="First run downloads the YOLO model (~6 MB).  Track IDs assigns a persistent number "
+                 "per player.  Team colors groups players by jersey color and enables possession stats "
+                 "when Player + Ball are both on.",
             font=ctk.CTkFont(size=11),
             text_color=TEXT_DIM,
+            wraplength=640, justify="left",
         )
-        self._note.grid(row=2, column=0, columnspan=7, padx=14, pady=(0, 10), sticky="w")
+        self._note.grid(row=2, column=0, columnspan=8, padx=14, pady=(0, 10), sticky="w")
 
         self._set_state("disabled")
 
@@ -97,7 +105,7 @@ class DetectionPanel(ctk.CTkFrame):
         self._set_state("normal" if self._enabled.get() else "disabled")
 
     def _set_state(self, state: str):
-        for w in (self._cb_person, self._cb_ball, self._cb_tracking, self._slider):
+        for w in (self._cb_person, self._cb_ball, self._cb_tracking, self._cb_teams, self._slider):
             w.configure(state=state)
 
     def get_settings(self) -> dict | None:
@@ -114,4 +122,5 @@ class DetectionPanel(ctk.CTkFrame):
             "classes": classes,
             "confidence": self._confidence.get(),
             "tracking": self._tracking.get(),
+            "teams": self._teams.get(),
         }
