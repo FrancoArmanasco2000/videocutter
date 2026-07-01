@@ -65,6 +65,17 @@ ventana porque `console=False`). Pasó en Mac (`v1.0.0`); Windows se salvaba
 porque el binario se llama `ffmpeg.exe`, no `ffmpeg`, así que no chocaba —
 pero Linux tiene el mismo riesgo que Mac (binario sin extensión).
 
+## Tracking — lapx
+`ultralytics` usa `bytetrack` para el "Track IDs", que a su vez necesita el
+paquete `lap` (o su fork `lapx`, que sí tiene wheels para Python 3.11).
+Sin bundlear, `ultralytics` intenta instalarlo solo en tiempo de ejecución
+(AutoUpdate vía `pip install`) — eso funciona corriendo desde código fuente
+con `pip` a mano, pero en el `.exe`/`.app` empaquetado no hay `pip` ni forma
+de instalar nada: tracking rompería para el usuario final la primera vez
+que lo use. Por eso `lapx==0.9.4` está en `requirements.txt` y `lap` +
+`collect_submodules("lap")` en `app.spec` — así viaja bundleado y
+`AutoUpdate` nunca se dispara.
+
 ## Mac — Gatekeeper
 Sin code signing, Mac muestra "developer unidentified".
 Solución para el amigo: clic derecho → Abrir (una sola vez).

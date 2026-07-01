@@ -142,6 +142,16 @@ jobs:
           body: |
             ## Video Cutter — Sports Analysis Edition ${{ github.ref_name }}
 
+            ### Qué trae
+
+            - Recorte y cola de clips, con exportación individual o en lote
+            - Detección de jugadores/pelota (YOLO) con tracking de IDs
+            - Clasificación de equipo por color de camiseta + estimación de posesión cerca de la pelota
+            - Telestrator (flechas, círculos, texto a mano) — se quema en el video exportado
+            - Tags/marcadores de eventos (goles, faltas, jugadas clave) para saltar rápido en el video
+            - Guardar / cargar proyecto (fuente, recortes, clips y tags) para retomar un partido largo
+            - Notificaciones del sistema al terminar descarga o exportación
+
             ### Instalación
 
             **Mac**
@@ -161,6 +171,7 @@ jobs:
             ```
 
             > La primera vez que uses detección AI descarga el modelo (~6 MB).
+            > La clasificación de equipo y la posesión son estimaciones (color de camiseta + proximidad a la pelota), no datos oficiales.
           files: |
             artifacts/VideoCutter-mac.zip
             artifacts/VideoCutter-windows.zip

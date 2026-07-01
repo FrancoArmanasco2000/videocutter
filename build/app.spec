@@ -90,7 +90,7 @@ if IS_MAC:
         bundle_identifier="com.videocutter.sports",
         info_plist={
             "NSHighResolutionCapable": True,
-            "CFBundleShortVersionString": "1.0.0",
+            "CFBundleShortVersionString": "1.1.0",
             "CFBundleName": "Video Cutter",
             "CFBundleDisplayName": "Video Cutter",
             "NSRequiresAquaSystemAppearance": False,
